@@ -121,12 +121,18 @@ async function runScrapeCycle() {
   console.log(`Successfully updated TARGET_URL to date: ${updateResult.date}`);
   
   // Reload environment variables after updating .env
+  // Force reload from disk by clearing the require cache for dotenv
+  delete require.cache[require.resolve('dotenv')];
   dotenv.config();
   
   // Run the main scraper
   console.log(`Running main scraper with TARGET_URL: ${process.env.TARGET_URL}`);
   try {
-    execSync('node index.js', { stdio: 'inherit' });
+    // Pass the updated TARGET_URL directly to the child process
+    execSync('node index.js', { 
+      stdio: 'inherit',
+      env: { ...process.env, TARGET_URL: process.env.TARGET_URL }
+    });
     console.log('Scraper finished successfully!');
     
     // Export to Google Sheets if configuration is available
