@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 const { createObjectCsvWriter } = require('csv-writer');
 const { extractContactInfo } = require('./contactExtractor');
 const { extractWebsiteContactInfo } = require('./websiteContactExtractor');
-const { delay, formatDate, randomDelay, cleanText, isValidUrl } = require('./utils');
+const { delay, formatDate, randomDelay, cleanText, isValidUrl, extractDateFromUrl } = require('./utils');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -90,6 +90,10 @@ async function scrapeProductHunt(browser, options = {}) {
   const csvFilePath = path.join(__dirname, `product_hunt_data_${formatDate(new Date())}.csv`);
   console.log(`CSV will be saved to: ${csvFilePath}`);
   
+  // Extract date from the target URL
+  const extractedDate = extractDateFromUrl(config.targetUrl);
+  console.log(`Extracted date from URL: ${extractedDate}`);
+  
   const csvWriter = createObjectCsvWriter({
     path: csvFilePath,
     header: [
@@ -104,7 +108,8 @@ async function scrapeProductHunt(browser, options = {}) {
       { id: 'websiteEmail', title: 'Website Email' },
       { id: 'websiteTwitter', title: 'Website Twitter' },
       { id: 'websiteLinkedin', title: 'Website LinkedIn' },
-      { id: 'websiteContactPage', title: 'Website Contact Page' }
+      { id: 'websiteContactPage', title: 'Website Contact Page' },
+      { id: 'extractedDate', title: 'Extracted Date' }
     ]
   });
   
@@ -154,7 +159,8 @@ async function scrapeProductHunt(browser, options = {}) {
               websiteEmail: productDetails.websiteContactInfo.email || '',
               websiteTwitter: productDetails.websiteContactInfo.twitter || '',
               websiteLinkedin: productDetails.websiteContactInfo.linkedin || '',
-              websiteContactPage: productDetails.websiteContactInfo.website || ''
+              websiteContactPage: productDetails.websiteContactInfo.website || '',
+              extractedDate: extractedDate
             };
             
             // Add to the array
@@ -174,7 +180,8 @@ async function scrapeProductHunt(browser, options = {}) {
             websiteEmail: productDetails.websiteContactInfo.email || '',
             websiteTwitter: productDetails.websiteContactInfo.twitter || '',
             websiteLinkedin: productDetails.websiteContactInfo.linkedin || '',
-            websiteContactPage: productDetails.websiteContactInfo.website || ''
+            websiteContactPage: productDetails.websiteContactInfo.website || '',
+            extractedDate: extractedDate
           };
           
           // Add to the array
@@ -199,7 +206,8 @@ async function scrapeProductHunt(browser, options = {}) {
           websiteEmail: '',
           websiteTwitter: '',
           websiteLinkedin: '',
-          websiteContactPage: ''
+          websiteContactPage: '',
+          extractedDate: extractedDate
         };
         
         // Add to the array

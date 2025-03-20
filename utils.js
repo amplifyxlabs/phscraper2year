@@ -64,10 +64,44 @@ function isValidUrl(url) {
   }
 }
 
+/**
+ * Extracts date from a Product Hunt leaderboard URL
+ * @param {string} url - URL in format https://www.producthunt.com/leaderboard/daily/YYYY/M/D/all
+ * @returns {string} Formatted date string (YYYY-MM-DD)
+ */
+function extractDateFromUrl(url) {
+  try {
+    // Default value in case extraction fails
+    const defaultDate = '';
+    
+    if (!url || !isValidUrl(url)) return defaultDate;
+    
+    // Extract date components using regex
+    const datePattern = /\/leaderboard\/daily\/([0-9]{4})\/([0-9]{1,2})\/([0-9]{1,2})\/all/;
+    const match = url.match(datePattern);
+    
+    if (match && match.length === 4) {
+      const year = match[1];
+      // Ensure month and day are padded with leading zeros if needed
+      const month = match[2].padStart(2, '0');
+      const day = match[3].padStart(2, '0');
+      
+      // Return a formatted date string
+      return `${year}-${month}-${day}`;
+    }
+    
+    return defaultDate;
+  } catch (error) {
+    console.error(`Error extracting date from URL: ${error.message}`);
+    return '';
+  }
+}
+
 module.exports = {
   delay,
   formatDate,
   randomDelay,
   cleanText,
-  isValidUrl
+  isValidUrl,
+  extractDateFromUrl
 }; 
