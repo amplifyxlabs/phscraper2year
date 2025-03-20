@@ -17,6 +17,14 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 // Reoon API key for email verification
 const REOON_API_KEY = 'r4xRoRT0EP97NQPZNt6kK1KEsKYG10ig';
 
+// Instantly API configuration
+const INSTANTLY_CONFIG = {
+  // V2 API uses Bearer token authentication
+  apiToken: process.env.INSTANTLY_API_TOKEN || 'NzBhMzU2NmQtZmJmZS00Zjc4LWE2YWYtODZiNTY5YTVmOTNkOlFoVkpCbVZpTWVUcQ==',
+  campaignId: process.env.INSTANTLY_CAMPAIGN_ID || '0d3661c1-7074-42ae-aa92-2fefe713ba3d',
+  apiUrl: 'https://api.instantly.ai/api/v2/leads' // V2 API endpoint
+};
+
 // Function to verify email using Reoon API
 async function verifyEmail(email) {
   try {
@@ -172,6 +180,62 @@ async function appendToSheet(auth, sheetId, values, sheetName = 'Data') {
   }
 }
 
+// Function to push data to Instantly using API V2
+async function pushToInstantly(rowData) {
+  // Validate input
+  if (!rowData) {
+    console.log('No row data provided to pushToInstantly');
+    return false;
+  }
+
+  console.log('Received row data in pushToInstantly: ' + JSON.stringify(rowData));
+
+  try {
+    // Extract email and first name directly from the provided object
+    const email = rowData.email;
+    const firstName = rowData.first_name || '';
+
+    if (!email) {
+      throw new Error('Email not provided to pushToInstantly');
+    }
+
+    // Prepare the lead data for V2 API
+    // V2 API uses snake_case for field names
+    const payload = {
+      email: email,
+      first_name: firstName,
+      campaign: INSTANTLY_CONFIG.campaignId,
+      payload: {
+        // Custom variables are now in the payload field
+        source: 'Product Hunt'
+      }
+    };
+
+    console.log('Created lead payload for V2 API: ' + JSON.stringify(payload));
+
+    const options = {
+      method: 'post',
+      url: INSTANTLY_CONFIG.apiUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${INSTANTLY_CONFIG.apiToken}` // V2 uses Bearer token auth
+      },
+      data: payload
+    };
+
+    const response = await axios(options);
+    console.log('Instantly API V2 Response:', response.status, response.data);
+
+    return response.status === 200 || response.status === 201;
+  } catch (error) {
+    console.error('Error in pushToInstantly with V2 API:', error.message);
+    if (error.response) {
+      console.error('API Error Details:', error.response.data);
+    }
+    return false;
+  }
+}
+
 // Function to find email columns in data
 function findEmailColumns(headers) {
   const emailColumns = [];
@@ -207,6 +271,7 @@ async function verifyAndFilterData(data) {
   
   // Add email verification status columns if they don't exist
   headers.push('Email Verification Status');
+  headers.push('Instantly Status');
   
   const processedData = [headers]; // Start with headers
   
@@ -216,6 +281,8 @@ async function verifyAndFilterData(data) {
     const rowWithVerification = [...row];
     
     let emailStatus = 'No Email';
+    let instantlyStatus = 'Not Sent';
+    let validEmail = null;
     
     // Check each email column in the row
     for (const colIndex of emailColumns) {
@@ -228,6 +295,7 @@ async function verifyAndFilterData(data) {
         
         if (verificationResult.isValid) {
           emailStatus = 'Valid';
+          validEmail = email.trim();
           break; // Found a valid email, no need to check others
         } else {
           emailStatus = 'Invalid';
@@ -236,8 +304,26 @@ async function verifyAndFilterData(data) {
       }
     }
     
+    // If we have a valid email, push to Instantly
+    if (emailStatus === 'Valid' && validEmail) {
+      // Find the name column if it exists
+      const nameColumnIndex = headers.findIndex(header => 
+        header.toLowerCase().includes('name') || 
+        header.toLowerCase().includes('maker'));
+      
+      // Push to Instantly
+      const pushResult = await pushToInstantly({
+        email: validEmail,
+        first_name: nameColumnIndex !== -1 && row[nameColumnIndex] ? row[nameColumnIndex] : ''
+      });
+      
+      instantlyStatus = pushResult ? 'Sent' : 'Failed';
+      console.log(`Instantly push for row ${i}: ${instantlyStatus}`);
+    }
+    
     // Add verification status and include all rows
     rowWithVerification.push(emailStatus);
+    rowWithVerification.push(instantlyStatus);
     processedData.push(rowWithVerification);
   }
   
