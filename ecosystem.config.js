@@ -2,12 +2,12 @@ module.exports = {
   apps: [
     {
       name: "ph-scraper",
-      script: "./cron-scraper.js",
+      script: "./continuous-scraper.js",
       instances: 1,
       exec_mode: "fork",
-      autorestart: false,
+      autorestart: true,
       watch: false,
-      cron_restart: "0 2 * * *", // Run every day at 2:00 AM
+      // cron_restart removed as we're now running continuously
       env: {
         NODE_ENV: "production",
         HEADLESS: "true",
