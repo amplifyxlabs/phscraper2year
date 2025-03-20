@@ -160,22 +160,70 @@ async function runScrapeCycle() {
   }
 }
 
+// Function to clean up memory
+function cleanupMemory() {
+  // Force garbage collection if available (only works with --expose-gc flag)
+  if (global.gc) {
+    console.log('Running garbage collection...');
+    global.gc();
+  }
+  
+  // Log memory usage before and after cleanup
+  const memoryBefore = process.memoryUsage();
+  console.log(`Memory usage before cleanup: RSS: ${Math.round(memoryBefore.rss / 1024 / 1024)}MB, Heap: ${Math.round(memoryBefore.heapUsed / 1024 / 1024)}MB / ${Math.round(memoryBefore.heapTotal / 1024 / 1024)}MB`);
+  
+  // Clear any module caches if needed
+  // This is an advanced technique and should be used carefully
+  // Object.keys(require.cache).forEach(function(key) {
+  //   if (key.includes('your-specific-module')) {
+  //     delete require.cache[key];
+  //   }
+  // });
+  
+  // Run manual cleanup
+  try {
+    // Clear any large objects that might be in memory
+    global.latestResults = null;
+    
+    // Suggest to V8 that now might be a good time to run GC
+    if (!global.gc) {
+      console.log('Suggesting garbage collection (Node not started with --expose-gc)');
+    }
+    
+    // Force a minor GC by creating and releasing a large array
+    let largeArray = new Array(10000000).fill(0);
+    largeArray = null;
+  } catch (error) {
+    console.error(`Error during memory cleanup: ${error.message}`);
+  }
+  
+  // Log memory usage after cleanup
+  const memoryAfter = process.memoryUsage();
+  console.log(`Memory usage after cleanup: RSS: ${Math.round(memoryAfter.rss / 1024 / 1024)}MB, Heap: ${Math.round(memoryAfter.heapUsed / 1024 / 1024)}MB / ${Math.round(memoryAfter.heapTotal / 1024 / 1024)}MB`);
+}
+
 // Main continuous scraping function
 async function startContinuousScraping() {
   console.log('Starting continuous scraper...');
   
   // Run forever
   while (true) {
+    // Log memory usage at start of cycle
+    const memoryStart = process.memoryUsage();
+    console.log(`Memory usage at cycle start: RSS: ${Math.round(memoryStart.rss / 1024 / 1024)}MB, Heap: ${Math.round(memoryStart.heapUsed / 1024 / 1024)}MB / ${Math.round(memoryStart.heapTotal / 1024 / 1024)}MB`);
+    
     const success = await runScrapeCycle();
     
     if (success) {
-      console.log('Scrape cycle completed successfully, waiting before next cycle...');
+      console.log('Scrape cycle completed successfully, cleaning up and waiting before next cycle...');
     } else {
-      console.error('Scrape cycle failed, waiting before retry...');
+      console.error('Scrape cycle failed, cleaning up and waiting before retry...');
     }
     
-    // Wait 5 minutes between scrape cycles to avoid overloading the server
-    // This can be adjusted based on your needs
+    // Clean up memory after each cycle
+    cleanupMemory();
+    
+    // Wait between scrape cycles to avoid overloading the server and allow memory to be fully released
     const waitMinutes = 5;
     console.log(`Waiting ${waitMinutes} minutes before next scrape cycle...`);
     await new Promise(resolve => setTimeout(resolve, waitMinutes * 60 * 1000));
