@@ -4,7 +4,7 @@
 
 # Copy files to VM
 echo "Copying files to VM..."
-scp -i ~/Downloads/phscraper2_key.pem cron-scraper.js ecosystem.config.js google-sheets-exporter.js .env azureuser@20.40.46.227:/home/azureuser/Phscarper/
+scp -i ~/Downloads/phscraper2_key.pem cron-scraper.js ecosystem.config.js google-sheets-exporter.js .env azureuser@20.40.46.227:/home/azureuser/phscraper2year/
 
 # Check if we need to upload Google credentials
 if [ -f "./google-credentials.json" ]; then
