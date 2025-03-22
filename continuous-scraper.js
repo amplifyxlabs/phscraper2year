@@ -125,13 +125,18 @@ async function runScrapeCycle() {
   delete require.cache[require.resolve('dotenv')];
   dotenv.config();
   
+  // Extract the URL from the .env file directly to ensure consistency
+  const envContent = fs.readFileSync(envFilePath, 'utf8');
+  const targetUrlMatch = envContent.match(/TARGET_URL=(.+)/);
+  const targetUrl = targetUrlMatch ? targetUrlMatch[1].trim() : process.env.TARGET_URL;
+  
   // Run the main scraper
-  console.log(`Running main scraper with TARGET_URL: ${process.env.TARGET_URL}`);
+  console.log(`Running main scraper with TARGET_URL: ${targetUrl}`);
   try {
     // Pass the updated TARGET_URL directly to the child process
     execSync('node index.js', { 
       stdio: 'inherit',
-      env: { ...process.env, TARGET_URL: process.env.TARGET_URL }
+      env: { ...process.env, TARGET_URL: targetUrl }
     });
     console.log('Scraper finished successfully!');
     
@@ -230,7 +235,7 @@ async function startContinuousScraping() {
     cleanupMemory();
     
     // Wait between scrape cycles to avoid overloading the server and allow memory to be fully released
-    const waitMinutes = 5;
+    const waitMinutes = 1;
     console.log(`Waiting ${waitMinutes} minutes before next scrape cycle...`);
     await new Promise(resolve => setTimeout(resolve, waitMinutes * 60 * 1000));
   }

@@ -191,9 +191,10 @@ async function pushToInstantly(rowData) {
   console.log('Received row data in pushToInstantly: ' + JSON.stringify(rowData));
 
   try {
-    // Extract email and first name directly from the provided object
+    // Extract email, first name, and website directly from the provided object
     const email = rowData.email;
     const firstName = rowData.first_name || '';
+    const website = rowData.website || '';
 
     if (!email) {
       throw new Error('Email not provided to pushToInstantly');
@@ -203,11 +204,17 @@ async function pushToInstantly(rowData) {
     // V2 API uses snake_case for field names
     const payload = {
       email: email,
-      first_name: firstName,
+      first_name: firstName, // Using product name as first_name
       campaign: INSTANTLY_CONFIG.campaignId,
+      contact_name: firstName, // Product name as contact info
+      company_name: website, // Use company_name field for website URL to make it visible
+      website: website, // Also include as website field
       payload: {
         // Custom variables are now in the payload field
-        source: 'Product Hunt'
+        source: 'Product Hunt',
+        website: website,
+        product_name: firstName,
+        product_url: website
       }
     };
 
@@ -306,15 +313,21 @@ async function verifyAndFilterData(data) {
     
     // If we have a valid email, push to Instantly
     if (emailStatus === 'Valid' && validEmail) {
-      // Find the name column if it exists
-      const nameColumnIndex = headers.findIndex(header => 
-        header.toLowerCase().includes('name') || 
-        header.toLowerCase().includes('maker'));
+      // Find the product name column
+      const productNameColumnIndex = headers.findIndex(header => 
+        header.toLowerCase().includes('product name') || 
+        header.toLowerCase().includes('name') && !header.toLowerCase().includes('first'));
+      
+      // Find the product website column
+      const productWebsiteColumnIndex = headers.findIndex(header => 
+        header.toLowerCase().includes('product website') || 
+        header.toLowerCase().includes('website'));
       
       // Push to Instantly
       const pushResult = await pushToInstantly({
         email: validEmail,
-        first_name: nameColumnIndex !== -1 && row[nameColumnIndex] ? row[nameColumnIndex] : ''
+        first_name: productNameColumnIndex !== -1 && row[productNameColumnIndex] ? row[productNameColumnIndex] : '',
+        website: productWebsiteColumnIndex !== -1 && row[productWebsiteColumnIndex] ? row[productWebsiteColumnIndex] : ''
       });
       
       instantlyStatus = pushResult ? 'Sent' : 'Failed';

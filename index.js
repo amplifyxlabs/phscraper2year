@@ -46,6 +46,7 @@ async function main() {
     // Launch browser with additional options
     const launchOptions = {
       headless: HEADLESS,
+      executablePath: '/snap/bin/chromium',
       defaultViewport: { width: 1366, height: 768 },
       args: [
         '--window-size=1366,768',
